@@ -104,4 +104,41 @@ def evaluate_model(model, X_test, y_test):
         'mse': mse,
         'r2': r2,
         'n_nonzero_features': n_nonzero
-    } 
+    }
+
+def generate_collinear_data(n_samples=100, n_features=10, noise=0.1):
+    """
+    Generate data with collinear features for testing LASSO's feature selection.
+    
+    Parameters:
+    -----------
+    n_samples : int, optional (default=100)
+        Number of samples.
+    n_features : int, optional (default=10)
+        Number of features.
+    noise : float, optional (default=0.1)
+        Standard deviation of noise added to target.
+        
+    Returns:
+    --------
+    X : array-like of shape (n_samples, n_features)
+        Generated features with collinear columns.
+    y : array-like of shape (n_samples,)
+        Generated target values.
+    """
+    np.random.seed(42)
+    
+    # Generate base features
+    X_base = np.random.randn(n_samples, n_features // 2)
+    
+    # Create collinear features
+    X_collinear = X_base + np.random.randn(n_samples, n_features // 2) * 0.1
+    
+    # Combine features
+    X = np.hstack([X_base, X_collinear])
+    
+    # Generate target values
+    true_coef = np.random.randn(n_features)
+    y = np.dot(X, true_coef) + np.random.randn(n_samples) * noise
+    
+    return X, y 

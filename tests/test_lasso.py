@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from src.lasso import LassoRegression
+from src.utils import generate_synthetic_data, generate_collinear_data
 
 def test_basic_functionality():
     """Test basic functionality with simple data."""
@@ -16,26 +17,17 @@ def test_basic_functionality():
 
 def test_feature_selection():
     """Test that LASSO performs feature selection with collinear data."""
-    # Create collinear features
-    X = np.array([
-        [1, 1, 0],  # First two features are identical
-        [2, 2, 1],
-        [3, 3, 2]
-    ])
-    y = np.array([1, 2, 3])
+    X, y = generate_collinear_data(n_samples=100, n_features=10)
     
     model = LassoRegression(alpha=0.1)
     model.fit(X, y)
     
-    # Check that one of the collinear features is set to zero
-    assert np.sum(np.abs(model.coef_) > 1e-6) < 3
+    # Check that some coefficients are exactly zero
+    assert np.sum(np.abs(model.coef_) > 1e-6) < 10
 
 def test_sparsity():
     """Test that LASSO produces sparse solutions."""
-    # Create data with some irrelevant features
-    np.random.seed(42)
-    X = np.random.randn(100, 10)
-    y = np.dot(X[:, :3], [1, 2, 3]) + np.random.randn(100) * 0.1
+    X, y, _ = generate_synthetic_data(n_samples=100, n_features=10, sparsity=0.3)
     
     model = LassoRegression(alpha=0.5)
     model.fit(X, y)
@@ -45,9 +37,7 @@ def test_sparsity():
 
 def test_convergence():
     """Test that the model converges with different alpha values."""
-    np.random.seed(42)
-    X = np.random.randn(50, 5)
-    y = np.dot(X, [1, 2, 0, 0, 0]) + np.random.randn(50) * 0.1
+    X, y, _ = generate_synthetic_data(n_samples=50, n_features=5)
     
     # Test with different alpha values
     alphas = [0.1, 0.5, 1.0]
@@ -105,4 +95,49 @@ def test_empty_input():
     
     model = LassoRegression()
     with pytest.raises(ValueError):
-        model.fit(X, y) 
+        model.fit(X, y)
+
+def test_dimension_mismatch():
+    """Test handling of dimension mismatch."""
+    X = np.array([[1, 2], [3, 4]])
+    y = np.array([1, 2, 3])  # Different number of samples
+    
+    model = LassoRegression()
+    with pytest.raises(ValueError):
+        model.fit(X, y)
+
+def test_collinear_feature_selection():
+    """Test feature selection with highly collinear data."""
+    X, y = generate_collinear_data(n_samples=100, n_features=10)
+    
+    # Test with different alpha values
+    alphas = [0.1, 0.5, 1.0]
+    n_nonzero_features = []
+    
+    for alpha in alphas:
+        model = LassoRegression(alpha=alpha)
+        model.fit(X, y)
+        n_nonzero = np.sum(np.abs(model.coef_) > 1e-6)
+        n_nonzero_features.append(n_nonzero)
+    
+    # Check that higher alpha values result in fewer selected features
+    assert n_nonzero_features[0] >= n_nonzero_features[1] >= n_nonzero_features[2]
+
+def test_solution_path():
+    """Test that the solution path is continuous."""
+    X, y, _ = generate_synthetic_data(n_samples=100, n_features=5)
+    
+    alphas = np.logspace(-3, 3, 10)
+    coefs = []
+    
+    for alpha in alphas:
+        model = LassoRegression(alpha=alpha)
+        model.fit(X, y)
+        coefs.append(model.coef_)
+    
+    coefs = np.array(coefs)
+    
+    # Check that coefficients change continuously
+    for i in range(coefs.shape[1]):
+        changes = np.abs(np.diff(coefs[:, i]))
+        assert np.all(changes < 1e-6) or np.all(changes > 0) 

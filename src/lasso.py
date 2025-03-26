@@ -22,6 +22,13 @@ class LassoRegression:
         tol : float, optional (default=1e-4)
             Convergence tolerance.
         """
+        if alpha < 0:
+            raise ValueError("alpha must be non-negative")
+        if max_iter < 1:
+            raise ValueError("max_iter must be positive")
+        if tol <= 0:
+            raise ValueError("tol must be positive")
+            
         self.alpha = alpha
         self.max_iter = max_iter
         self.tol = tol
@@ -47,6 +54,13 @@ class LassoRegression:
         X = np.asarray(X)
         y = np.asarray(y)
         
+        if X.size == 0:
+            raise ValueError("X cannot be empty")
+        if y.size == 0:
+            raise ValueError("y cannot be empty")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y must have the same number of samples")
+            
         # Center the data
         X_mean = np.mean(X, axis=0)
         y_mean = np.mean(y)
